@@ -1,0 +1,43 @@
+---
+- name: Install MariaDB for Django
+  apt:
+    name:
+      - mariadb-server
+      #- libmariadbclient-dev
+      - python3-mysqldb
+    update_cache: yes
+    cache_valid_time: 3600
+    state: latest
+  become: yes
+
+# TODO: run mysql_secure_install
+- name: Create database
+  mysql_db:
+    name: "{{ db_name }}"
+    login_user: root
+    state: present
+  become: yes
+
+- name: Create user with database privileges
+  mysql_user:
+    login_user: root
+    name: "{{ db_user }}"
+    password: "{{ db_user_passwd }}"
+    host: "{{ item }}"
+    priv: "{{ db_name }}.*:ALL"
+    state: present
+  become: yes
+  with_items:
+    - "{{ app_ip }}"
+
+# Working on Debian 11
+- name: Setup MariaDB to accept remote conections
+  replace:
+    path: '/etc/mysql/mariadb.conf.d/50-server.cnf'
+    regexp: "{{ item.original }}"
+    replace: "{{ item.replace }}"
+  with_items:
+    - { original: '127.0.0.1', replace: '0.0.0.0' }
+  become: yes
+  notify:
+    - restart mariadb

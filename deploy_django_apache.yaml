@@ -1,0 +1,8 @@
+---
+- hosts: django_mariadb
+  roles:
+    - django_mariadb
+
+- hosts: django_apache
+  roles:
+    - django_apache

@@ -1,0 +1,115 @@
+---
+- name: Install Apache for Django
+  apt:
+    name:
+      - apache2
+      - libapache2-mod-wsgi-py3
+    update_cache: yes
+    cache_valid_time: 3600
+    state: latest
+  become: yes
+
+- name: Create SSL self-signed certificate
+  shell: "openssl req -newkey rsa:4096 -sha256 -nodes -x509 -subj '/C={{ ssl_country }}/ST={{ ssl_state }}/L={{ ssl_location }}/O={{ ssl_organization }}/CN={{ ssl_fqdn }}' -days 365 -keyout /etc/ssl/private/{{ app_name }}.key -out /etc/ssl/{{ app_name }}.crt"
+  become: yes
+
+- name: Enable Apache modules
+  shell: a2enmod ssl wsgi
+  become: yes
+  notify: restart apache
+
+- name: Copy Apache conf
+  template:
+    src: "templates/apache.conf.j2"
+    dest: "/etc/apache2/sites-available/{{ app_name }}.conf"
+  become: yes
+  notify:
+    - remove default site
+    - add django site
+    - restart apache
+
+- name: Install Python and dependecies
+  apt:
+    name:
+      - python3
+      - python3-venv
+      - python3-pip
+      - "{{ item }}"
+    update_cache: yes
+    cache_valid_time: 3600
+    state: latest
+  with_items: "{{ app_dependencies }}"
+  become: yes
+
+- name: Create secret files dir
+  file:
+    owner: www-data
+    group: www-data
+    mode: "0700"
+    path: /etc/django
+    state: directory
+  become: yes
+
+- name: Deploy MariaDB passwd file
+  shell: "echo {{ db_user_passwd }} > /etc/django/mysql-passwd"
+  become: yes
+
+- name: Set MariaDB passwd file permission 
+  file:
+    owner: www-data
+    group: www-data
+    mode: "0400"
+    path: /etc/django/mysql-passwd
+  become: yes
+
+- name: Deploy secret files
+  copy:
+    src: "{{ item }}"
+    dest: "/etc/django/"
+    owner: www-data
+    group: www-data
+    mode: "0400"
+  become: yes
+  with_items: "{{ app_secret_files }}"
+
+- name: Deploy Django app
+  synchronize:
+    src: "{{ app_src_dir }}/"
+    dest: "{{ app_install_dir }}"
+    rsync_opts:
+      - "--exclude=.git"
+  become: yes
+
+- name: Deploy Django settings.py
+  template:
+    src: "templates/settings.py.j2"
+    dest: "{{ app_install_dir }}/{{ app_name }}/settings.py"
+  become: yes
+  notify: restart apache
+
+- name: Set app dir permissions
+  file:
+    owner: www-data
+    group: www-data
+    mode: "0750"
+    state: directory
+    recurse: yes
+    path: "{{ app_install_dir }}"
+  become: yes
+
+- name: Create venv and install dependencies
+  pip:
+    requirements: "{{ app_install_dir }}/requirements.txt"
+    virtualenv: "{{ app_venv_dir }}"
+    virtualenv_command: "python3 -m venv"
+  become: yes
+
+- name: Set venv dir permissions
+  file:
+    owner: www-data
+    group: www-data
+    mode: '0750'
+    state: directory
+    recurse: yes
+    path: "{{ app_venv_dir }}"
+  become: yes

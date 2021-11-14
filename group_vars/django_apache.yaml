@@ -1,0 +1,13 @@
+---
+app_dependencies:
+  - libmariadb-dev
+app_install_dir: /var/www/django_app
+app_src_dir: /home/adriano/workspace/django_app
+app_secret_files:
+  - /home/adriano/workspace/django_app/django-key
+app_machine_name: localhost
+ssl_country: BR
+ssl_state: MS
+ssl_location: Dourados
+ssl_organization: "AB\ Labs"
+ssl_fqdn: "adrianobarbosa.xyz"

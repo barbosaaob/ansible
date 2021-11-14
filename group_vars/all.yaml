@@ -1,0 +1,11 @@
+---
+app_ip: "192.168.121.53"
+app_name: django_app
+app_venv_dir: /var/www/django_app-venv
+db_name: django
+db_user: django_user
+db_user_passwd: "$up3rSecR3tP4$$"
+# use your settings.py:
+# - add {{ app_ip }} to ALLOWED_HOSTS
+# - configure MariaDB variables and passwd file reading
+# - configure SECRET_KEY file reading

@@ -1,0 +1,14 @@
+---
+- name: remove default site
+  shell: 'a2dissite 000-default'
+  become: yes
+
+- name: add django site
+  shell: "a2ensite {{ app_name }}"
+  become: yes
+
+- name: restart apache
+  service:
+    name: apache2
+    state: restarted
+  become: yes

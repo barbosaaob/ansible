@@ -1,0 +1,44 @@
+<VirtualHost *:80>
+	ServerName {{ app_machine_name }}
+
+	ErrorLog ${APACHE_LOG_DIR}/error-{{ app_name }}.log
+	CustomLog ${APACHE_LOG_DIR}/access-{{ app_name }}.log combined
+
+    Redirect / https://{{ app_machine_name }}/
+</VirtualHost>
+
+<IfModule mod_ssl.c>
+	<VirtualHost _default_:443>
+        ServerName {{ app_machine_name }}
+
+		WSGIScriptAlias / {{ app_install_dir }}/{{ app_name }}/wsgi.py
+        WSGIDaemonProcess {{ app_name }} python-home={{ app_venv_dir }} python-path={{ app_install_dir }}
+		WSGIProcessGroup {{ app_name }}
+		WSGIApplicationGroup %{GLOBAL}
+
+		Alias /static/ {{ app_install_dir }}/static/
+		<Directory {{ app_install_dir }}/static>
+			Options -Indexes
+			Require all granted
+		</Directory>
+		
+		Alias /media/ {{ app_install_dir }}/media/
+		<Directory {{ app_install_dir }}/media>
+			Options -Indexes
+			Require all granted
+		</Directory>
+
+		<Directory {{ app_install_dir }}/{{ app_name }}>
+		<Files wsgi.py>
+			Require all granted
+		</Files>
+		</Directory>
+
+		ErrorLog ${APACHE_LOG_DIR}/error-{{ app_name }}-ssl.log
+		CustomLog ${APACHE_LOG_DIR}/access-{{ app_name }}-ssl.log combined
+
+		SSLEngine on
+        SSLCertificateFile 	/etc/ssl/{{ app_name }}.crt
+        SSLCertificateKeyFile 	/etc/ssl/private/{{ app_name }}.key
+	</VirtualHost>
+</IfModule>
