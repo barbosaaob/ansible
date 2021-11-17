@@ -3,19 +3,33 @@
   apt:
     name:
       - mariadb-server
-      #- libmariadbclient-dev
       - python3-mysqldb
+      - python3-pexpect
     update_cache: yes
     cache_valid_time: 3600
     state: latest
   become: yes
 
-# TODO: run mysql_secure_install
 - name: Create database
   mysql_db:
     name: "{{ db_name }}"
     login_user: root
     state: present
+  become: yes
+
+# Working on Debian 11
+- name: Run mysql_secure_installation
+  expect:
+    command: /usr/bin/mysql_secure_installation
+    timeout: 2
+    responses:
+      Enter current password for root: ""
+      Switch to unix_socket authentication: "y"
+      Change the root password: "n"
+      Remove anonymous users: "y"
+      Disallow root login remotely: "y"
+      Remove test database and access to it: "y"
+      Reload privilege tables now: "y"
   become: yes
 
 - name: Create user with database privileges
@@ -33,11 +47,11 @@
 # Working on Debian 11
 - name: Setup MariaDB to accept remote conections
   replace:
-    path: '/etc/mysql/mariadb.conf.d/50-server.cnf'
+    path: "/etc/mysql/mariadb.conf.d/50-server.cnf"
     regexp: "{{ item.original }}"
     replace: "{{ item.replace }}"
   with_items:
-    - { original: '127.0.0.1', replace: '0.0.0.0' }
+    - { original: "127.0.0.1", replace: "0.0.0.0" }
   become: yes
   notify:
     - restart mariadb
